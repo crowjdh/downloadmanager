@@ -1,10 +1,11 @@
 import multiprocessing
 import time
+import signal
 from multiprocessing.managers import BaseManager
 import curses
 
-from tqdm import tqdm, trange
 from item import Item, Items
+import itemprinter
 
 class DownloadItemManager(BaseManager): pass
 
@@ -16,42 +17,12 @@ def Manager():
 DownloadItemManager.register('Items', Items)
 
 def initPool(l):
+	def sig_int(signal_num, frame):
+		itemprinter.cleanup()
+		print 'signal: %s' % signal_num
+	signal.signal(signal.SIGINT, sig_int)
 	global lock
 	lock = l
-
-def printProgress(items):
-	stdscr.clear()
-	printProgressSummary(items)
-	for idx, item in enumerate(items.getItems()):
-		printItemProgress(idx, item)
-
-	stdscr.refresh()
-
-def printProgressSummary(items):
-	doneCount = 0
-
-	message = ""
-	for item in items.getItems():
-		if item.isDone:
-			message = message + "True\t"
-			doneCount += 1
-		else:
-			message = message + "False\t"
-	
-	stdscr.move(0, 0)
-	stdscr.deleteln()
-	stdscr.addstr(0, 0, str(doneCount) + "\t" + message)
-
-	stdscr.refresh()
-
-def printItemProgress(idx, item):
-	progress = item.progressInPercentage()
-	msg = "Item {0}: [{2:50}] {1}%".format(idx, int(progress * 100), "#" * int(progress*50))
-	stdscr.move(idx+1, 0)
-	stdscr.deleteln()
-	stdscr.addstr(idx+1, 0, msg)
-
-	stdscr.refresh()
 
 def download(arg):
 	idx = arg[0]
@@ -62,13 +33,11 @@ def download(arg):
 		time.sleep(0.01)
 		lock.acquire()
 		items.progressItemBy(idx, 1)
-		printProgress(items)
+		itemprinter.printProgress(items.getItems())
 		lock.release()
 
 if __name__ == "__main__":
-	stdscr = curses.initscr()
-	curses.noecho()
-	curses.cbreak()
+	itemprinter.setup()
 
 	manager = Manager()
 
@@ -77,13 +46,16 @@ if __name__ == "__main__":
 
 	l = multiprocessing.Lock()
 	pool = multiprocessing.Pool(initializer = initPool, initargs=(l,), processes=2)
+	result = pool.map_async(download, [(idx, items) for idx in range(len(itemsArr))])
 
-	pool.map(download, [(idx, items) for idx in range(len(itemsArr))])
+	while True:
+		try:
+			result.get(0xfff)
+		except multiprocessing.TimeoutError as ex:
+			pass
 	pool.close()
 	pool.join()
 
 	time.sleep(5)
 
-	curses.echo()
-	curses.nocbreak()
-	curses.endwin()
+	itemprinter.cleanup()
