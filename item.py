@@ -13,14 +13,25 @@ class Items:
 	def progressItemBy(self, idx, progress):
 		self.items[idx].progressBy(progress)
 
+	def setSizeOfItemAt(self, idx, size):
+		self.items[idx].setSize(size)
+
 class Item:
-	def __init__(self, size):
+	def __init__(self, url, size = -1, title = None):
+		self.url = url
 		self.size = size
+		self.title = title
 		self.progress = 0
 		self.isDone = False
 
+	def getSize(self):
+		return self.size
+
+	def setSize(self, size):
+		self.size = size
+
 	def progressInPercentage(self):
-		return self.progress / self.size
+		return 0 if self.size < 0 else self.progress / self.size
 
 	def progressBy(self, progress):
 		self.progress += progress
