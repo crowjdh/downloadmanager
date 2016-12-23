@@ -25,11 +25,11 @@ def initPool(l):
 
 def download(arg):
 	idx = arg[0]
-	items = arg[1]
+	outputPath = arg[1]
+	items = arg[2]
 	with requests.session() as sess:
 		response = sess.get(items.getItem(idx).url, stream=True)
 		total_length = int(response.headers.get('Content-Length', 0))
-		print "idx: {0}\tsize: {1}".format(idx, total_length)
 
 		items.setSizeOfItemAt(idx, total_length)
 		fileName = addExtensionToFIleName(response, items.getItem(idx).title)
@@ -46,7 +46,12 @@ def download(arg):
 
 def addExtensionToFIleName(response, title):
 	contentType = response.headers.get('Content-Type')
-	extension = guess_extension(contentType)
+	extension = None
+	try:
+		extension = guess_extension(contentType)
+	except:
+		extension = None
+
 	if extension is None:
 		extensionCandidates = contentType.split("/")
 		if len(extensionCandidates) > 1:
@@ -56,7 +61,7 @@ def addExtensionToFIleName(response, title):
 	
 	return title + extension
 
-def createDirectory(outputPath)
+def createDirectory(outputPath):
 	if not os.path.exists(outputPath):
 		os.makedirs(outputPath)
 
@@ -68,7 +73,7 @@ def batchDownload(itemsArr, outputPath):
 
 	l = multiprocessing.Lock()
 	pool = multiprocessing.Pool(initializer = initPool, initargs=(l,), processes=2)
-	pool.map_async(download, [(idx, items) for idx in range(len(itemsArr))])
+	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))])
 	pool.close()
 	pool.join()
 
