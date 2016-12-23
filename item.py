@@ -19,17 +19,8 @@ class Item:
 		self.progress = 0
 		self.isDone = False
 
-	def getSize(self):
-		return self.size
-
-	def getIsDone(self):
-		return self.isDone
-
 	def progressInPercentage(self):
 		return self.progress / self.size
-
-	def getProgress(self):
-		return self.progress
 
 	def progressBy(self, progress):
 		self.progress += progress

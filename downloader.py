@@ -15,7 +15,6 @@ def Manager():
     return m
 
 MyManager.register('Items', Items)
-MyManager.register('Item', Item)
 
 def initPool(l):
 	global lock
@@ -34,7 +33,7 @@ def printProgressSummary(items):
 
 	message = ""
 	for item in items.getItems():
-		if item.getIsDone():
+		if item.isDone:
 			message = message + "True\t"
 			doneCount += 1
 		else:
@@ -60,7 +59,7 @@ def download(arg):
 	items = arg[1]
 	item = items.getItem(idx)
 
-	for i in range(item.getSize()):
+	for i in range(item.size):
 		time.sleep(0.01)
 		lock.acquire()
 		items.progressItemBy(idx, 1)
@@ -74,7 +73,7 @@ if __name__ == "__main__":
 
 	manager = Manager()
 
-	itemsArr = [manager.Item(10), manager.Item(20), manager.Item(30), manager.Item(40), manager.Item(50), manager.Item(40), manager.Item(30), manager.Item(20), manager.Item(20), manager.Item(20), manager.Item(20)]
+	itemsArr = [Item(10), Item(20), Item(30), Item(40), Item(50), Item(40), Item(30), Item(20), Item(20), Item(20), Item(20)]
 	items = manager.Items(itemsArr)
 
 	l = multiprocessing.Lock()
