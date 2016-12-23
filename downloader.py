@@ -1,30 +1,29 @@
-from tqdm import tqdm, trange
-import time
 import multiprocessing
-from multiprocessing.managers import BaseManager
-from functools import partial
-from item import Item, Items
-import curses
 import time
+from multiprocessing.managers import BaseManager
+import curses
 
-class MyManager(BaseManager): pass
+from tqdm import tqdm, trange
+from item import Item, Items
+
+class DownloadItemManager(BaseManager): pass
 
 def Manager():
-    m = MyManager()
+    m = DownloadItemManager()
     m.start()
     return m
 
-MyManager.register('Items', Items)
+DownloadItemManager.register('Items', Items)
 
 def initPool(l):
 	global lock
 	lock = l
 
-def report_progress(items):
+def printProgress(items):
 	stdscr.clear()
 	printProgressSummary(items)
 	for idx, item in enumerate(items.getItems()):
-		printProgress(idx, item)
+		printItemProgress(idx, item)
 
 	stdscr.refresh()
 
@@ -45,9 +44,9 @@ def printProgressSummary(items):
 
 	stdscr.refresh()
 
-def printProgress(idx, item):
+def printItemProgress(idx, item):
 	progress = item.progressInPercentage()
-	msg = "Item {0}: [{2:51}] {1}%".format(idx, int(progress * 100), "#" * int(progress*50))
+	msg = "Item {0}: [{2:50}] {1}%".format(idx, int(progress * 100), "#" * int(progress*50))
 	stdscr.move(idx+1, 0)
 	stdscr.deleteln()
 	stdscr.addstr(idx+1, 0, msg)
@@ -63,7 +62,7 @@ def download(arg):
 		time.sleep(0.01)
 		lock.acquire()
 		items.progressItemBy(idx, 1)
-		report_progress(items)
+		printProgress(items)
 		lock.release()
 
 if __name__ == "__main__":
@@ -82,8 +81,6 @@ if __name__ == "__main__":
 	pool.map(download, [(idx, items) for idx in range(len(itemsArr))])
 	pool.close()
 	pool.join()
-
-	report_progress(items)
 
 	time.sleep(5)
 
