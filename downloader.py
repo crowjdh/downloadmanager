@@ -6,6 +6,7 @@ from multiprocessing.managers import BaseManager
 import curses
 
 import requests
+from requests import Session
 
 from item import Item, Items
 import itemprinter
@@ -18,31 +19,46 @@ def Manager():
     return m
 
 DownloadItemManager.register('Items', Items)
+DownloadItemManager.register('Session', Session)
 
-def initPool(l):
+def initPool(l, sessArg, beforeRequestArg):
 	global lock
+	global sess
+	global beforeRequest
+	# global lastStartTime
+	global stopWatch
 	lock = l
+	sess = sessArg
+	beforeRequest = beforeRequestArg
 
 def download(arg):
 	idx = arg[0]
 	outputPath = arg[1]
 	items = arg[2]
-	with requests.session() as sess:
-		response = sess.get(items.getItem(idx).url, stream=True)
-		total_length = int(response.headers.get('Content-Length', 0))
+	# with requests.session() as sess:
+	lock.acquire()
+	print "sleep before request: " + str(idx)
+	# sleepBefore()
+	time.sleep(5)
+	if beforeRequest is not None:
+		beforeRequest(idx)
+	response = sess.get(items.getItem(idx).url, stream=True)
+	lock.release()
 
-		items.setSizeOfItemAt(idx, total_length)
-		fileName = addExtensionToFIleName(response, items.getItem(idx).title)
-		createDirectory(outputPath)
-		filePath = os.path.join(outputPath, fileName)
+	total_length = int(response.headers.get('Content-Length', 0))
 
-		with open(filePath, "wb") as handle:
-			for data in response.iter_content(chunk_size=1024):
-				handle.write(data)
-				lock.acquire()
-				items.progressItemBy(idx, len(data))
-				itemprinter.printProgress(items.getItems())
-				lock.release()
+	items.setSizeOfItemAt(idx, total_length)
+	fileName = addExtensionToFIleName(response, items.getItem(idx).title)
+	createDirectory(outputPath)
+	filePath = os.path.join(outputPath, fileName)
+
+	with open(filePath, "wb") as handle:
+		for data in response.iter_content(chunk_size=1024):
+			handle.write(data)
+			lock.acquire()
+			items.progressItemBy(idx, len(data))
+			itemprinter.printProgress(items.getItems())
+			lock.release()
 
 def addExtensionToFIleName(response, title):
 	contentType = response.headers.get('Content-Type')
@@ -65,14 +81,17 @@ def createDirectory(outputPath):
 	if not os.path.exists(outputPath):
 		os.makedirs(outputPath)
 
-def batchDownload(itemsArr, outputPath):
+def test():
+	print "aaa"
+
+def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None):
 	itemprinter.setup()
 
 	manager = Manager()
 	items = manager.Items(itemsArr)
 
 	l = multiprocessing.Lock()
-	pool = multiprocessing.Pool(initializer = initPool, initargs=(l,), processes=2)
+	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest), processes=2)
 	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))])
 	pool.close()
 	pool.join()
@@ -87,4 +106,5 @@ if __name__ == "__main__":
 	url_20mb = "http://download.thinkbroadband.com/20MB.zip"
 	itemsArr = [Item(url_5mb, title = "test title"), Item(url_5mb, title = "test title2"), Item(url_5mb, title = "test title3")]
 
-	batchDownload(itemsArr, "output")
+	with requests.session() as sess:
+		batchDownload(itemsArr, "output", sess)
