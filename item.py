@@ -16,6 +16,9 @@ class Items:
 	def setSizeOfItemAt(self, idx, size):
 		self.items[idx].setSize(size)
 
+	def setItemSleepingAt(self, idx, sleeping):
+		self.items[idx].setSleeping(sleeping)
+
 class Item:
 	def __init__(self, url, size = -1, title = None):
 		self.url = url
@@ -23,12 +26,16 @@ class Item:
 		self.title = title
 		self.progress = 0
 		self.isDone = False
+		self.sleeping = True
 
 	def getSize(self):
 		return self.size
 
 	def setSize(self, size):
 		self.size = size
+
+	def setSleeping(self, sleeping):
+		self.sleeping = sleeping
 
 	def progressInPercentage(self):
 		return 0 if self.size < 0 else self.progress / self.size

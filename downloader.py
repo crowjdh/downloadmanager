@@ -35,7 +35,11 @@ def download(arg):
 	items = arg[2]
 	lock.acquire()
 	print "sleep before request: " + str(idx)
+	items.setItemSleepingAt(idx, True)
+	itemprinter.printProgress(items.getItems())
 	time.sleep(5)
+	items.setItemSleepingAt(idx, False)
+	itemprinter.printProgress(items.getItems())
 	if beforeRequest is not None:
 		beforeRequest(idx)
 	response = sess.get(items.getItem(idx).url, stream=True)
@@ -48,6 +52,7 @@ def download(arg):
 	createDirectory(outputPath)
 	filePath = os.path.join(outputPath, fileName)
 
+	print "Start downloading at: " + str(idx)
 	with open(filePath, "wb") as handle:
 		for data in response.iter_content(chunk_size=1024):
 			handle.write(data)
@@ -80,14 +85,14 @@ def createDirectory(outputPath):
 def test():
 	print "aaa"
 
-def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None):
+def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None, processes = 2):
 	itemprinter.setup()
 
 	manager = Manager()
 	items = manager.Items(itemsArr)
 
 	l = multiprocessing.Lock()
-	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest), processes=2)
+	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest), processes = processes)
 	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))])
 	pool.close()
 	pool.join()

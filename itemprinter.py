@@ -43,7 +43,7 @@ def printProgressSummary(items):
 
 def printItemProgress(idx, item, itemsCnt):
 	progress = item.progressInPercentage()
-	msg = "Item {0:>{itemsCnt}}: [{2:50}] {1}%".format(idx, int(progress * 100), "#" * int(progress*50), itemsCnt = itemsCnt)
+	msg = "Item {0:>{itemsCnt}}: [{2:50}] {1}%\t{sleeping}".format(idx, int(progress * 100), "#" * int(progress*50), itemsCnt = itemsCnt, sleeping="Sleeping" if item.sleeping else "Awake")
 	printIt(idx+1, 0, msg)
 
 def preparePrint():
