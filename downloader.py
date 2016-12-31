@@ -25,8 +25,6 @@ def initPool(l, sessArg, beforeRequestArg):
 	global lock
 	global sess
 	global beforeRequest
-	# global lastStartTime
-	global stopWatch
 	lock = l
 	sess = sessArg
 	beforeRequest = beforeRequestArg
@@ -35,10 +33,8 @@ def download(arg):
 	idx = arg[0]
 	outputPath = arg[1]
 	items = arg[2]
-	# with requests.session() as sess:
 	lock.acquire()
 	print "sleep before request: " + str(idx)
-	# sleepBefore()
 	time.sleep(5)
 	if beforeRequest is not None:
 		beforeRequest(idx)
