@@ -2,6 +2,10 @@ import curses
 
 debug = False
 
+# TODO: Fix error when printing taller then the terminal window
+# TODO: Change first line of log to show progress
+# TODO: Consider adding download speed per item
+
 def setup():
 	if debug:
 		return
