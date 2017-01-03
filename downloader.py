@@ -37,18 +37,33 @@ def download(arg):
 	idx = arg[0]
 	outputPath = arg[1]
 	items = arg[2]
-	lock.acquire()
-	print "sleep before request: " + str(idx)
-	items.setItemSleepingAt(idx, True)
-	printer.printProgress(items.getItems())
-	time.sleep(5)
-	items.setItemSleepingAt(idx, False)
-	printer.printProgress(items.getItems())
-	if beforeRequest is not None:
-		beforeRequest(idx)
-	response = sess.get(items.getItem(idx).url, stream=True)
-	lock.release()
+	with lock:
+		waitForAWhile(5, lambda : printer.printProgress(items.getItems()))
+		items.setItemSleepingAt(idx, False)
+		printer.printProgress(items.getItems())
+		if beforeRequest is not None:
+			beforeRequest(idx)
+		response = sess.get(items.getItem(idx).url, stream=True)
+	refactorItem(response, items, idx)
 
+	fileName = addExtensionToFIleName(response, items.getItem(idx).title)
+	createDirectory(outputPath)
+	filePath = os.path.join(outputPath, fileName)
+
+	with open(filePath, "wb") as handle:
+		for data in response.iter_content(chunk_size=1024):
+			handle.write(data)
+			with lock:
+				items.progressItemBy(idx, len(data))
+				printer.printProgress(items.getItems())
+
+def waitForAWhile(secs, action):
+	resolution = 10
+	for i in range(secs * resolution):
+		action()
+		time.sleep(1. / resolution)
+
+def refactorItem(response, items, idx):
 	total_length = int(response.headers.get('Content-Length', 0))
 
 	items.setSizeOfItemAt(idx, total_length)
@@ -56,19 +71,6 @@ def download(arg):
 	if itemTitle is None:
 		itemTitle = "Untitled-{0}".format(idx)
 		items.setItemTitle(idx, itemTitle)
-
-	fileName = addExtensionToFIleName(response, itemTitle)
-	createDirectory(outputPath)
-	filePath = os.path.join(outputPath, fileName)
-
-	print "Start downloading at: " + str(idx)
-	with open(filePath, "wb") as handle:
-		for data in response.iter_content(chunk_size=1024):
-			handle.write(data)
-			lock.acquire()
-			items.progressItemBy(idx, len(data))
-			printer.printProgress(items.getItems())
-			lock.release()
 
 def addExtensionToFIleName(response, title):
 	contentType = response.headers.get('Content-Type')
