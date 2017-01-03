@@ -1,3 +1,4 @@
+import os
 import curses
 
 debug = False
@@ -11,9 +12,13 @@ def setup():
 		return
 
 	global stdscr
+	global termianlRowCnt
+
 	stdscr = curses.initscr()
 	curses.noecho()
 	curses.cbreak()
+
+	termianlRowCnt = int(os.popen('stty size', 'r').read().split()[0])
 
 def cleanup():
 	if debug:
@@ -23,12 +28,19 @@ def cleanup():
 	curses.echo()
 	curses.endwin()
 
-def printProgress(items):
+def printProgress(items, cursorIdx = 0):
 	preparePrint()
 	printProgressSummary(items)
-	itemsCnt = len(str(len(items)))
-	for idx, item in enumerate(items):
-		printItemProgress(idx, item, itemsCnt)
+	itemsCnt = len(items)
+	itemsCntDigit = len(str(itemsCnt))
+	printRange = None
+	if itemsCnt <= termianlRowCnt - 1:
+		printRange = range(0, itemsCnt)
+	else:
+		printRange = range(cursorIdx, min(cursorIdx + termianlRowCnt, itemsCnt))
+	for idx in printRange:
+		item = items[idx]
+		printItemProgress(idx, item, itemsCntDigit)
 
 	doPrint()
 

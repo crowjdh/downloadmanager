@@ -7,6 +7,7 @@ import curses
 
 import requests
 from requests import Session
+from readchar import readchar
 
 from item import Item, Items
 import itemprinter
@@ -21,13 +22,15 @@ def Manager():
 DownloadItemManager.register('Items', Items)
 DownloadItemManager.register('Session', Session)
 
-def initPool(l, sessArg, beforeRequestArg):
+def initPool(l, sessArg, beforeRequestArg, cursorIdxArg):
 	global lock
 	global sess
 	global beforeRequest
+	global cursorIdx
 	lock = l
 	sess = sessArg
 	beforeRequest = beforeRequestArg
+	cursorIdxArg = cursorIdxArg
 
 def download(arg):
 	idx = arg[0]
@@ -36,10 +39,10 @@ def download(arg):
 	lock.acquire()
 	print "sleep before request: " + str(idx)
 	items.setItemSleepingAt(idx, True)
-	itemprinter.printProgress(items.getItems())
+	itemprinter.printProgress(items.getItems(), cursorIdx = cursorIdx.value)
 	time.sleep(5)
 	items.setItemSleepingAt(idx, False)
-	itemprinter.printProgress(items.getItems())
+	itemprinter.printProgress(items.getItems(), cursorIdx = cursorIdx.value)
 	if beforeRequest is not None:
 		beforeRequest(idx)
 	response = sess.get(items.getItem(idx).url, stream=True)
@@ -58,7 +61,7 @@ def download(arg):
 			handle.write(data)
 			lock.acquire()
 			items.progressItemBy(idx, len(data))
-			itemprinter.printProgress(items.getItems())
+			itemprinter.printProgress(items.getItems(), cursorIdx = cursorIdx.value)
 			lock.release()
 
 def addExtensionToFIleName(response, title):
@@ -82,19 +85,39 @@ def createDirectory(outputPath):
 	if not os.path.exists(outputPath):
 		os.makedirs(outputPath)
 
-def test():
-	print "aaa"
+def watchKeyInputUntilDone(items):
+	global jobDone
+	while not jobDone:
+		key = readchar()
+		if key == "w":
+			cursorIdx.value -= 1
+		elif key == "s":
+			cursorIdx.value += 1
+		# elif key == '\x1b':
+		# 	pass
+		time.sleep(0.1)
+
+def callback(arg):
+	global jobDone
+	jobDone = True
 
 def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None, processes = 2):
 	itemprinter.setup()
 
 	manager = Manager()
 	items = manager.Items(itemsArr)
+	global cursorIdx
+	cursorIdx = multiprocessing.Value('i', 0)
+
+	global jobDone
+	jobDone = False
 
 	l = multiprocessing.Lock()
-	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest), processes = processes)
-	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))])
+	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest, cursorIdx), processes = processes)
+
+	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))], callback = callback)
 	pool.close()
+	watchKeyInputUntilDone(items)
 	pool.join()
 
 	time.sleep(5)
