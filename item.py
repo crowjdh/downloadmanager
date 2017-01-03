@@ -16,6 +16,9 @@ class Items:
 	def setSizeOfItemAt(self, idx, size):
 		self.items[idx].setSize(size)
 
+	def setItemTitle(self, idx, title):
+		self.items[idx].setTitle(title)
+
 	def setItemSleepingAt(self, idx, sleeping):
 		self.items[idx].setSleeping(sleeping)
 
@@ -33,6 +36,9 @@ class Item:
 
 	def setSize(self, size):
 		self.size = size
+
+	def setTitle(self, title):
+		self.title = title
 
 	def setSleeping(self, sleeping):
 		self.sleeping = sleeping

@@ -10,7 +10,7 @@ from requests import Session
 from readchar import readchar
 
 from item import Item, Items
-import itemprinter
+from itemprinter import ItemPrinter
 
 class DownloadItemManager(BaseManager): pass
 
@@ -21,16 +21,17 @@ def Manager():
 
 DownloadItemManager.register('Items', Items)
 DownloadItemManager.register('Session', Session)
+DownloadItemManager.register('ItemPrinter', ItemPrinter)
 
-def initPool(l, sessArg, beforeRequestArg, cursorIdxArg):
+def initPool(l, sessArg, beforeRequestArg, printerArg):
 	global lock
 	global sess
 	global beforeRequest
-	global cursorIdx
+	global printer
 	lock = l
 	sess = sessArg
 	beforeRequest = beforeRequestArg
-	cursorIdxArg = cursorIdxArg
+	printer = printerArg
 
 def download(arg):
 	idx = arg[0]
@@ -39,10 +40,10 @@ def download(arg):
 	lock.acquire()
 	print "sleep before request: " + str(idx)
 	items.setItemSleepingAt(idx, True)
-	itemprinter.printProgress(items.getItems(), cursorIdx = cursorIdx.value)
+	printer.printProgress(items.getItems())
 	time.sleep(5)
 	items.setItemSleepingAt(idx, False)
-	itemprinter.printProgress(items.getItems(), cursorIdx = cursorIdx.value)
+	printer.printProgress(items.getItems())
 	if beforeRequest is not None:
 		beforeRequest(idx)
 	response = sess.get(items.getItem(idx).url, stream=True)
@@ -51,7 +52,12 @@ def download(arg):
 	total_length = int(response.headers.get('Content-Length', 0))
 
 	items.setSizeOfItemAt(idx, total_length)
-	fileName = addExtensionToFIleName(response, items.getItem(idx).title)
+	itemTitle = items.getItem(idx).title
+	if itemTitle is None:
+		itemTitle = "Untitled-{0}".format(idx)
+		items.setItemTitle(idx, itemTitle)
+
+	fileName = addExtensionToFIleName(response, itemTitle)
 	createDirectory(outputPath)
 	filePath = os.path.join(outputPath, fileName)
 
@@ -61,7 +67,7 @@ def download(arg):
 			handle.write(data)
 			lock.acquire()
 			items.progressItemBy(idx, len(data))
-			itemprinter.printProgress(items.getItems(), cursorIdx = cursorIdx.value)
+			printer.printProgress(items.getItems())
 			lock.release()
 
 def addExtensionToFIleName(response, title):
@@ -78,7 +84,7 @@ def addExtensionToFIleName(response, title):
 			extension = "." + extensionCandidates[1]
 		else:
 			extension = ".unknown"
-	
+
 	return title + extension
 
 def createDirectory(outputPath):
@@ -87,12 +93,13 @@ def createDirectory(outputPath):
 
 def watchKeyInputUntilDone(items):
 	global jobDone
+	itemCount = len(items.getItems())
 	while not jobDone:
 		key = readchar()
 		if key == "w":
-			cursorIdx.value -= 1
+			printer.moveCursor(itemCount, -1)
 		elif key == "s":
-			cursorIdx.value += 1
+			printer.moveCursor(itemCount, 1)
 		# elif key == '\x1b':
 		# 	pass
 		time.sleep(0.1)
@@ -102,18 +109,19 @@ def callback(arg):
 	jobDone = True
 
 def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None, processes = 2):
-	itemprinter.setup()
-
 	manager = Manager()
+
+	global printer
+	printer = manager.ItemPrinter()
+	printer.setup()
+
 	items = manager.Items(itemsArr)
-	global cursorIdx
-	cursorIdx = multiprocessing.Value('i', 0)
 
 	global jobDone
 	jobDone = False
 
 	l = multiprocessing.Lock()
-	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest, cursorIdx), processes = processes)
+	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest, printer), processes = processes)
 
 	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))], callback = callback)
 	pool.close()
@@ -122,7 +130,7 @@ def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest
 
 	time.sleep(5)
 
-	itemprinter.cleanup()
+	printer.cleanup()
 
 if __name__ == "__main__":
 	url_5mb = "http://download.thinkbroadband.com/5MB.zip"
