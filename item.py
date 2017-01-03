@@ -19,8 +19,8 @@ class Items:
 	def setItemTitle(self, idx, title):
 		self.items[idx].setTitle(title)
 
-	def setItemSleepingAt(self, idx, sleeping):
-		self.items[idx].setSleeping(sleeping)
+	def setItemsetStatusMessageAt(self, idx, msg):
+		self.items[idx].setStatusMessage(msg)
 
 class Item:
 	def __init__(self, url, size = -1, title = None):
@@ -29,7 +29,7 @@ class Item:
 		self.title = title
 		self.progress = 0
 		self.isDone = False
-		self.sleeping = True
+		self.statusMessage = "Sleeping"
 
 	def getSize(self):
 		return self.size
@@ -40,8 +40,8 @@ class Item:
 	def setTitle(self, title):
 		self.title = title
 
-	def setSleeping(self, sleeping):
-		self.sleeping = sleeping
+	def setStatusMessage(self, msg):
+		self.statusMessage = msg
 
 	def progressInPercentage(self):
 		return 0 if self.size < 0 else self.progress / self.size

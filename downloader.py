@@ -39,7 +39,7 @@ def download(arg):
 	items = arg[2]
 	with lock:
 		waitForAWhile(5, lambda : printer.printProgress(items.getItems()))
-		items.setItemSleepingAt(idx, False)
+		items.setItemsetStatusMessageAt(idx, "Fetching...")
 		printer.printProgress(items.getItems())
 		if beforeRequest is not None:
 			beforeRequest(idx)
@@ -50,12 +50,14 @@ def download(arg):
 	createDirectory(outputPath)
 	filePath = os.path.join(outputPath, fileName)
 
+	items.setItemsetStatusMessageAt(idx, "Downloading...")
 	with open(filePath, "wb") as handle:
 		for data in response.iter_content(chunk_size=1024):
 			handle.write(data)
 			with lock:
 				items.progressItemBy(idx, len(data))
 				printer.printProgress(items.getItems())
+	items.setItemsetStatusMessageAt(idx, "Done")
 
 def waitForAWhile(secs, action):
 	resolution = 10
