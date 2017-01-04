@@ -11,6 +11,7 @@ from readchar import readchar
 
 from item import Item, Items
 from itemprinter import ItemPrinter
+from loggingpool import LoggingPool
 
 class DownloadItemManager(BaseManager): pass
 
@@ -58,6 +59,7 @@ def download(arg):
 				items.progressItemBy(idx, len(data))
 				printer.printProgress(items.getItems())
 	items.setItemsetStatusMessageAt(idx, "Done")
+	printer.printProgress(items.getItems())
 
 def waitForAWhile(secs, action):
 	resolution = 10
@@ -104,19 +106,29 @@ def watchKeyInputUntilDone(items):
 			printer.moveCursor(itemCount, -1)
 		elif key == "s":
 			printer.moveCursor(itemCount, 1)
-		# elif key == '\x1b':
-		# 	pass
+		elif key == '\x1b':
+			raise Exception("esc")
 		time.sleep(0.1)
 
 def callback(arg):
 	global jobDone
 	jobDone = True
 
+def exceptionHandler(e, *args, **kwargs):
+	args = args[0]
+	idx = args[0]
+	items = args[2]
+	items.setItemsetStatusMessageAt(idx, "Error")
+	printer.printProgress(items.getItems())
+
+	if isinstance(e, KeyboardInterrupt):
+		raise Exception("KeyboardInterrupt")
+
 def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None, processes = 2):
 	manager = Manager()
 
 	global printer
-	printer = manager.ItemPrinter()
+	printer = manager.ItemPrinter(message = "W: Up, S: Down, ESC: Exit")
 	printer.setup()
 
 	items = manager.Items(itemsArr)
@@ -125,16 +137,23 @@ def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest
 	jobDone = False
 
 	l = multiprocessing.Lock()
-	pool = multiprocessing.Pool(initializer = initPool, initargs=(l, sess, beforeRequest, printer), processes = processes)
+
+	pool = LoggingPool(initializer = initPool, initargs=(l, sess, beforeRequest, printer), processes = processes, exceptionHandler = exceptionHandler)
 
 	pool.map_async(download, [(idx, outputPath, items) for idx in range(len(itemsArr))], callback = callback)
-	pool.close()
-	watchKeyInputUntilDone(items)
-	pool.join()
-
-	time.sleep(5)
-
-	printer.cleanup()
+	try:
+		watchKeyInputUntilDone(items)
+	except (KeyboardInterrupt, Exception):
+		# Cancel gracefully
+		pool.terminate()
+	else:
+		pool.close()
+	finally:
+		pool.join()
+		printer.setMessage("Press any key to exit")
+		printer.printProgress(items.getItems())
+		readchar()
+		printer.cleanup()
 
 if __name__ == "__main__":
 	url_5mb = "http://download.thinkbroadband.com/5MB.zip"

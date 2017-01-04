@@ -7,19 +7,22 @@ debug = False
 # TODO: Change first line of log to show progress
 # TODO: Consider adding download speed per item
 
-PORTION_TITLE = .2
+PORTION_TITLE = .13
 PORTION_PROGRESS = .6
 
 LENGTH_STATUS = 15
 
 class ItemPrinter:
-	def __init__(self):
+	def __init__(self, message = ""):
 		rows, cols = os.popen('stty size', 'r').read().split()
 		self.termianlRowCnt = int(rows)
 		self.termianlColCnt = int(cols)
 		self.printPadding = int(self.termianlRowCnt * 0.8)
+		self.message = message
 
 	def setup(self):
+		self.cursorIdx = 0
+
 		if debug:
 			return
 
@@ -28,8 +31,6 @@ class ItemPrinter:
 		curses.noecho()
 		curses.cbreak()
 
-		self.cursorIdx = 0
-
 	def cleanup(self):
 		if debug:
 			return
@@ -37,6 +38,9 @@ class ItemPrinter:
 		curses.nocbreak()
 		curses.echo()
 		curses.endwin()
+
+	def setMessage(self, message):
+		self.message = message
 
 	def printProgress(self, items):
 		self.preparePrint()
@@ -61,8 +65,8 @@ class ItemPrinter:
 		for item in items:
 			if item.isDone:
 				doneCount += 1
-		
-		self.printIt(0, 0, "Progress: {0}/{1}".format(doneCount, len(items)))
+
+		self.printIt(0, 0, "Progress: {0}/{1}\t\t{2}".format(doneCount, len(items), self.message))
 
 	def printItemProgress(self, items, itemIdx, printIdx, itemsCnt):
 		item = items[itemIdx]
@@ -70,8 +74,9 @@ class ItemPrinter:
 		# msg = "Item {0:>{itemsCnt}}: [{2:50}] {1}%\t{statusMsg}".format(itemIdx, int(progress * 100), "#" * int(progress*50), itemsCnt = itemsCnt, statusMsg=item.statusMessage)
 		titleLength = int((self.termianlColCnt - LENGTH_STATUS) * PORTION_TITLE)
 		progressLength = int((self.termianlColCnt - LENGTH_STATUS) * PORTION_PROGRESS)
-		msg = "{0:>{titleLength}}: [{2:{progressLength}}] {1}%\t{statusMsg:>{statusLength}}".format(item.title, int(progress * 100), "#" * int(progress*progressLength),
-			statusMsg=item.statusMessage, titleLength = titleLength, progressLength = progressLength, statusLength = LENGTH_STATUS)
+		msg = "[{itemIdx:>{itemsCnt}}]{0:>{titleLength}}: [{2:{progressLength}}] {1}%\t{statusMsg:>{statusLength}}".format(item.title, int(progress * 100), "#" * int(progress*progressLength),
+			statusMsg=item.statusMessage, titleLength = titleLength, progressLength = progressLength, statusLength = LENGTH_STATUS,
+			itemIdx = itemIdx, itemsCnt = itemsCnt)
 		self.printIt(printIdx, 0, msg)
 
 	def preparePrint(self):
