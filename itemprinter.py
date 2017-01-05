@@ -1,5 +1,7 @@
 import os
 import curses
+import locale
+import strutil
 
 debug = False
 
@@ -7,17 +9,20 @@ debug = False
 # TODO: Change first line of log to show progress
 # TODO: Consider adding download speed per item
 
-PORTION_TITLE = .13
-PORTION_PROGRESS = .6
-
+PORTION_PROGRESS = .4
+LENGTH_TITLE = 15
 LENGTH_STATUS = 15
+LENGTH_PERCENTAGE = 4
+# PADDING_COLUMN = 15
+ELLIPSIS = '...'
 
 class ItemPrinter:
-	def __init__(self, message = ""):
+	def __init__(self, encoding = "utf-8", message = ""):
 		rows, cols = os.popen('stty size', 'r').read().split()
 		self.termianlRowCnt = int(rows)
 		self.termianlColCnt = int(cols)
-		self.printPadding = int(self.termianlRowCnt * 0.8)
+		self.printRowPadding = int(self.termianlRowCnt * 0.8)
+		self.encoding = encoding
 		self.message = message
 
 	def setup(self):
@@ -26,6 +31,7 @@ class ItemPrinter:
 		if debug:
 			return
 
+		locale.setlocale(locale.LC_ALL, '')
 		global stdscr
 		stdscr = curses.initscr()
 		curses.noecho()
@@ -68,16 +74,35 @@ class ItemPrinter:
 
 		self.printIt(0, 0, "Progress: {0}/{1}\t\t{2}".format(doneCount, len(items), self.message))
 
-	def printItemProgress(self, items, itemIdx, printIdx, itemsCnt):
+	def printItemProgress(self, items, itemIdx, printIdx, itemsCntLength):
+		msg = self.buildItemProgressMessage(items, itemIdx, printIdx, itemsCntLength)
+		self.printIt(printIdx, 0, msg)
+
+	def buildItemProgressMessage(self, items, itemIdx, printIdx, itemsCntLength):
+		msgFormat = "[{itemIdx:>{itemsCntLength}}]{0:>{targetTitleLength}}: [{2:{targetProgressLength}}] {1:>{percentageLength}}%  {3:>{targetStatusLength}}"
+		additionalLength = len(strutil.removeBetween(msgFormat, '{', '}'))
+
 		item = items[itemIdx]
 		progress = item.progressInPercentage()
-		# msg = "Item {0:>{itemsCnt}}: [{2:50}] {1}%\t{statusMsg}".format(itemIdx, int(progress * 100), "#" * int(progress*50), itemsCnt = itemsCnt, statusMsg=item.statusMessage)
-		titleLength = int((self.termianlColCnt - LENGTH_STATUS) * PORTION_TITLE)
-		progressLength = int((self.termianlColCnt - LENGTH_STATUS) * PORTION_PROGRESS)
-		msg = "[{itemIdx:>{itemsCnt}}]{0:>{titleLength}}: [{2:{progressLength}}] {1}%\t{statusMsg:>{statusLength}}".format(item.title, int(progress * 100), "#" * int(progress*progressLength),
-			statusMsg=item.statusMessage, titleLength = titleLength, progressLength = progressLength, statusLength = LENGTH_STATUS,
-			itemIdx = itemIdx, itemsCnt = itemsCnt)
-		self.printIt(printIdx, 0, msg)
+		colsLeft = self.termianlColCnt - LENGTH_STATUS - itemsCntLength - LENGTH_PERCENTAGE - LENGTH_TITLE - additionalLength - 1
+		targetTitleLength = LENGTH_TITLE
+		targetProgressLength = int(colsLeft * PORTION_PROGRESS)
+			
+		title = item.title
+		if title is not None:
+			title = title if type(title) == 'unicode' else title.decode(self.encoding)
+			titleLength = len(title)
+			if titleLength > targetTitleLength:
+				fractionLength = int((targetTitleLength - len(ELLIPSIS)) / 2.)
+				title = title[0:fractionLength] + ELLIPSIS + title[titleLength - fractionLength:titleLength]
+			title = title.encode(self.encoding)
+			# title = title
+
+		return msgFormat.format(
+			title, int(progress * 100), "#" * int(progress*targetProgressLength), item.statusMessage,
+			itemIdx = itemIdx, itemsCntLength = itemsCntLength,
+			targetTitleLength = targetTitleLength, targetProgressLength = targetProgressLength,
+			targetStatusLength = LENGTH_STATUS, percentageLength = LENGTH_PERCENTAGE)
 
 	def preparePrint(self):
 		if debug:
@@ -101,6 +126,4 @@ class ItemPrinter:
 			self.cursorIdx = max(0, self.cursorIdx - 1)
 		elif direction > 0:
 			# Show few lines more for readability
-			self.cursorIdx = min(itemCount - self.printPadding, self.cursorIdx + 1)
-		# elif key == '\x1b':
-		# 	pass
+			self.cursorIdx = min(itemCount - self.printRowPadding, self.cursorIdx + 1)

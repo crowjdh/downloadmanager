@@ -13,6 +13,8 @@ from item import Item, Items
 from itemprinter import ItemPrinter
 from loggingpool import LoggingPool
 
+# TODO: Add requirements.txt
+
 class DownloadItemManager(BaseManager): pass
 
 def Manager():
@@ -124,11 +126,11 @@ def exceptionHandler(e, *args, **kwargs):
 	if isinstance(e, KeyboardInterrupt):
 		raise Exception("KeyboardInterrupt")
 
-def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None, processes = 2):
+def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest = None, processes = 2, printEncoding = 'utf-8'):
 	manager = Manager()
 
 	global printer
-	printer = manager.ItemPrinter(message = "W: Up, S: Down, ESC: Exit")
+	printer = manager.ItemPrinter(message = "W: Up, S: Down, ESC: Exit", encoding = printEncoding)
 	printer.setup()
 
 	items = manager.Items(itemsArr)
