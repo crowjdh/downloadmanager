@@ -5,7 +5,6 @@ import strutil
 
 debug = False
 
-# TODO: Fix error when printing taller then the terminal window
 # TODO: Change first line of log to show progress
 # TODO: Consider adding download speed per item
 
@@ -13,7 +12,6 @@ PORTION_PROGRESS = .4
 LENGTH_TITLE = 15
 LENGTH_STATUS = 15
 LENGTH_PERCENTAGE = 4
-# PADDING_COLUMN = 15
 ELLIPSIS = '...'
 
 class ItemPrinter:
@@ -96,7 +94,6 @@ class ItemPrinter:
 				fractionLength = int((targetTitleLength - len(ELLIPSIS)) / 2.)
 				title = title[0:fractionLength] + ELLIPSIS + title[titleLength - fractionLength:titleLength]
 			title = title.encode(self.encoding)
-			# title = title
 
 		return msgFormat.format(
 			title, int(progress * 100), "#" * int(progress*targetProgressLength), item.statusMessage,

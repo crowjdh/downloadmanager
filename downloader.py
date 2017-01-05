@@ -13,8 +13,6 @@ from item import Item, Items
 from itemprinter import ItemPrinter
 from loggingpool import LoggingPool
 
-# TODO: Add requirements.txt
-
 class DownloadItemManager(BaseManager): pass
 
 def Manager():
