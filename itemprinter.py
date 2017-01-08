@@ -10,6 +10,7 @@ debug = False
 
 PORTION_PROGRESS = .8
 LENGTH_TITLE = 15
+LENGTH_PROGRESS_TEXT = 15
 LENGTH_STATUS = 15
 LENGTH_PERCENTAGE = 4
 ELLIPSIS = '...'
@@ -77,12 +78,11 @@ class ItemPrinter:
 		self.printIt(printIdx, 0, msg)
 
 	def buildItemProgressMessage(self, items, itemIdx, printIdx, itemsCntLength):
-		msgFormat = "[{itemIdx:>{itemsCntLength}}]{0:>{targetTitleLength}}: [{2:{targetProgressLength}}] {1:>{percentageLength}}%  {3:>{targetStatusLength}}"
+		msgFormat = "[{itemIdx:>{itemsCntLength}}]{0:>{targetTitleLength}}: [{2:{targetProgressLength}}] {1:>{percentageLength}}%  {3:>{targetStatusLength}} {4:>{targetTextProgressLength}}"
 		additionalLength = len(strutil.removeBetween(msgFormat, '{', '}'))
 
 		item = items[itemIdx]
-		progress = item.progressInPercentage()
-		colsLeft = self.termianlColCnt - LENGTH_STATUS - itemsCntLength - LENGTH_PERCENTAGE - LENGTH_TITLE - additionalLength - 1
+		colsLeft = self.termianlColCnt - LENGTH_STATUS - itemsCntLength - LENGTH_PERCENTAGE - LENGTH_TITLE - LENGTH_PROGRESS_TEXT - additionalLength - 1
 		targetTitleLength = LENGTH_TITLE
 		targetProgressLength = int(colsLeft * PORTION_PROGRESS)
 			
@@ -95,11 +95,24 @@ class ItemPrinter:
 				title = title[0:fractionLength] + ELLIPSIS + title[titleLength - fractionLength:titleLength]
 			title = title.encode(self.encoding)
 
+		progressInPercentage = item.progressInPercentage()
+		megabyte = 1024. * 1024.
+
+		progressInBytes = item.getProgress()
+		totalSizeInBytes = item.getSize()
+		if progressInBytes >= 0 and totalSizeInBytes > 0:
+			progressMB = item.getProgress() / megabyte
+			totalSizeMB = item.getSize() / megabyte
+			progressText = "{0:.2f}MB/{1:.2f}MB".format(progressMB, totalSizeMB)
+		else:
+			progressText = "0/0"
+
 		return msgFormat.format(
-			title, int(progress * 100), "#" * int(progress*targetProgressLength), item.statusMessage,
+			title, int(progressInPercentage * 100), "#" * int(progressInPercentage*targetProgressLength), item.statusMessage, progressText,
 			itemIdx = itemIdx, itemsCntLength = itemsCntLength,
 			targetTitleLength = targetTitleLength, targetProgressLength = targetProgressLength,
-			targetStatusLength = LENGTH_STATUS, percentageLength = LENGTH_PERCENTAGE)
+			targetStatusLength = LENGTH_STATUS, percentageLength = LENGTH_PERCENTAGE,
+			targetTextProgressLength = LENGTH_PROGRESS_TEXT)
 
 	def preparePrint(self):
 		if debug:

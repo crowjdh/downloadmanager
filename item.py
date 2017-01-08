@@ -49,6 +49,9 @@ class Item:
 	def setProgress(self, progress):
 		self.progress = progress
 
+	def getProgress(self):
+		return self.progress
+
 	def progressInPercentage(self):
 		return 0 if self.size < 0 else self.progress / self.size
 

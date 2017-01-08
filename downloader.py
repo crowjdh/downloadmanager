@@ -54,11 +54,11 @@ def download(arg):
 
 	fileSize = os.stat(filePath).st_size if os.path.exists(filePath) else 0
 	if fileSize > 0:
-		items.setItemsetStatusMessageAt(idx, str(fileSize))
 		response = sess.get(items.getItem(idx).url, stream=True, headers = {'Range': 'bytes=%d-' % fileSize})
 		items.setInitialProgressOfItemAt(idx, fileSize)
 		printer.printProgress(items.getItems())
 
+	items.setItemsetStatusMessageAt(idx, "Downloading...")
 	with open(filePath, "ab") as handle:
 		for data in response.iter_content(chunk_size=1024):
 			handle.write(data)
