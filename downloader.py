@@ -45,14 +45,21 @@ def download(arg):
 		if beforeRequest is not None:
 			beforeRequest(idx)
 		response = sess.get(items.getItem(idx).url, stream=True)
-	refactorItem(response, items, idx)
+	setItemSize(response, items, idx)
+	setItemTitleIfNone(items, idx)
 
 	fileName = addExtensionToFIleName(response, items.getItem(idx).title)
 	createDirectory(outputPath)
 	filePath = os.path.join(outputPath, fileName)
 
-	items.setItemsetStatusMessageAt(idx, "Downloading...")
-	with open(filePath, "wb") as handle:
+	fileSize = os.stat(filePath).st_size if os.path.exists(filePath) else 0
+	if fileSize > 0:
+		items.setItemsetStatusMessageAt(idx, str(fileSize))
+		response = sess.get(items.getItem(idx).url, stream=True, headers = {'Range': 'bytes=%d-' % fileSize})
+		items.setInitialProgressOfItemAt(idx, fileSize)
+		printer.printProgress(items.getItems())
+
+	with open(filePath, "ab") as handle:
 		for data in response.iter_content(chunk_size=1024):
 			handle.write(data)
 			with lock:
@@ -67,10 +74,12 @@ def waitForAWhile(secs, action):
 		action()
 		time.sleep(1. / resolution)
 
-def refactorItem(response, items, idx):
+def setItemSize(response, items, idx):
 	total_length = int(response.headers.get('Content-Length', 0))
 
 	items.setSizeOfItemAt(idx, total_length)
+
+def setItemTitleIfNone(items, idx):
 	itemTitle = items.getItem(idx).title
 	if itemTitle is None:
 		itemTitle = "Untitled-{0}".format(idx)
@@ -118,7 +127,7 @@ def exceptionHandler(e, *args, **kwargs):
 	args = args[0]
 	idx = args[0]
 	items = args[2]
-	items.setItemsetStatusMessageAt(idx, "Error")
+	items.setItemsetStatusMessageAt(idx, str(e))
 	printer.printProgress(items.getItems())
 
 	if isinstance(e, KeyboardInterrupt):
@@ -156,10 +165,10 @@ def batchDownload(itemsArr, outputPath, sess = requests.session(), beforeRequest
 		printer.cleanup()
 
 if __name__ == "__main__":
-	url_5mb = "http://download.thinkbroadband.com/5MB.zip"
-	url_10mb = "http://download.thinkbroadband.com/10MB.zip"
-	url_20mb = "http://download.thinkbroadband.com/20MB.zip"
-	itemsArr = [Item(url_5mb, title = "test title"), Item(url_5mb, title = "test title2"), Item(url_5mb, title = "test title3")]
+	fileOne = "https://upload.wikimedia.org/wikipedia/commons/7/74/Earth_poster_large.jpg"
+	fileTwo = "http://www.kenrockwell.com/nikon/d600/sample-images/600_0985.JPG"
+	fileThree = "http://istg.rootsweb.com/maps/images/lgRRmap.jpg"
+	itemsArr = [Item(fileOne), Item(fileTwo, title = "test title2"), Item(fileThree, title = "test title3")]
 
 	with requests.session() as sess:
 		batchDownload(itemsArr, "output", sess)

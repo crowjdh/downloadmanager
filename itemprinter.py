@@ -8,7 +8,7 @@ debug = False
 # TODO: Change first line of log to show progress
 # TODO: Consider adding download speed per item
 
-PORTION_PROGRESS = .4
+PORTION_PROGRESS = .8
 LENGTH_TITLE = 15
 LENGTH_STATUS = 15
 LENGTH_PERCENTAGE = 4

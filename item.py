@@ -10,6 +10,9 @@ class Items:
 	def getItems(self):
 		return self.items
 
+	def setInitialProgressOfItemAt(self, idx, progress):
+		self.items[idx].setProgress(progress)
+
 	def progressItemBy(self, idx, progress):
 		self.items[idx].progressBy(progress)
 
@@ -42,6 +45,9 @@ class Item:
 
 	def setStatusMessage(self, msg):
 		self.statusMessage = msg
+
+	def setProgress(self, progress):
+		self.progress = progress
 
 	def progressInPercentage(self):
 		return 0 if self.size < 0 else self.progress / self.size
