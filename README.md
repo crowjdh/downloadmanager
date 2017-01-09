@@ -1,7 +1,8 @@
 # Batch Downloader
-Batch download manager for Python
+Batch downloader for Python CLI
 
 # Preview
+![preview](/images/preview_01.png)
 
 # Dependencies
 See [requirements.txt](https://github.com/crowjdh/downloadmanager/blob/master/requirements.txt)
@@ -18,5 +19,5 @@ if __name__ == "__main__":
 	itemsArr = [Item(fileOne), Item(fileTwo, title = "SampleImage"), Item(fileThree)]
 
 	with requests.session() as sess:
-		batchDownload(itemsArr, "output", sess = sess)
+		downloader.batchDownload(itemsArr, "output", sess = sess)
 ```
